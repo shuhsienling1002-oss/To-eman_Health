@@ -18,85 +18,92 @@ if 'page' not in st.session_state:
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 樣式表：針對高齡者優化 (大字體、高對比、溫暖配色)
+# CSS 樣式表：針對高齡者優化 (修正版：按鈕超大、置中)
 st.markdown("""
     <style>
-    /* 全局字體加大 */
+    /* 全局字體設定 */
     html, body, [class*="css"] {
         font-family: "Microsoft JhengHei", sans-serif;
     }
     
-    /* 巨大按鈕樣式 */
+    /* 一般按鈕樣式 (選項用) */
     .stButton>button {
         width: 100%;
-        height: 85px;
-        font-size: 26px !important;
+        height: 100px;
+        font-size: 28px !important;
         font-weight: bold;
-        border-radius: 15px;
-        margin-bottom: 12px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        border-radius: 20px;
+        margin-bottom: 15px;
+        border: 2px solid #ddd;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    
-    /* 首頁紅色求救按鈕特別強化 */
+
+    /* 🚨 紅色救命按鈕專屬樣式 (特大號) 🚨 */
+    /* 透過 type="primary" 來鎖定這顆按鈕 */
     .stButton>button[kind="primary"] {
-        height: 150px;
-        font-size: 40px !important;
-        background-color: #d32f2f;
-        border: 2px solid white;
-        animation: pulse 2s infinite;
+        height: 180px !important;       /* 高度加大 */
+        font-size: 50px !important;     /* 字體超大 */
+        background-color: #d32f2f !important;
+        color: white !important;
+        border: 4px solid white !important;
+        box-shadow: 0 0 15px rgba(211, 47, 47, 0.6) !important;
+        animation: pulse 2s infinite;   /* 呼吸燈動畫 */
     }
-    
+
+    /* 呼吸燈動畫定義 */
     @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+        70% { transform: scale(1.02); box-shadow: 0 0 0 20px rgba(211, 47, 47, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
     }
 
-    /* 叮嚀小語區塊 */
+    /* 溫馨叮嚀區塊 */
     .care-message-box {
-        background-color: #fff3e0; /* 暖橘色背景 */
-        border-left: 6px solid #ff9800;
+        background-color: #fff3e0;
+        border-left: 8px solid #ff9800;
         padding: 20px;
-        border-radius: 10px;
-        margin-bottom: 25px;
-        font-size: 22px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        font-size: 24px;
+        font-weight: 500;
         color: #5d4037;
-        line-height: 1.6;
+        line-height: 1.5;
     }
 
-    /* 醫院名稱超大字體 */
+    /* 結果頁：醫院名稱大標題 */
     .hospital-title {
-        font-size: 42px;
+        font-size: 48px;
         font-weight: 900;
         color: #1a237e;
         text-align: center;
-        border: 3px solid #1a237e;
-        padding: 15px;
-        border-radius: 10px;
-        margin-top: 10px;
+        border: 4px solid #1a237e;
+        padding: 20px;
+        border-radius: 15px;
+        margin-top: 15px;
         background-color: #e8eaf6;
     }
 
     /* 警示橫幅 */
     .alert-banner {
-        padding: 15px;
+        padding: 20px;
         color: white;
         text-align: center;
-        font-size: 28px;
+        font-size: 32px;
         font-weight: bold;
-        border-radius: 8px;
-        margin-bottom: 15px;
+        border-radius: 10px;
+        margin-bottom: 20px;
     }
     .bg-red { background-color: #c62828; }
     .bg-yellow { background-color: #fbc02d; color: black !important; }
     .bg-green { background-color: #2e7d32; }
     
-    /* 步驟清單 */
+    /* SOP 步驟 */
     .sop-step {
-        font-size: 24px;
-        margin-bottom: 10px;
-        padding: 10px;
+        font-size: 26px;
+        margin-bottom: 12px;
+        padding: 15px;
         background-color: #f5f5f5;
+        border-left: 5px solid #757575;
         border-radius: 5px;
     }
     </style>
@@ -106,38 +113,38 @@ st.markdown("""
 # 1. 資料庫：叮嚀語與醫療資訊 (Layer 1: Content)
 # ==========================================
 
-# 老人的叮嚀語錄 (隨機顯示或固定顯示)
+# 老人的叮嚀語錄
 CARE_MESSAGES = [
-    "👴 VuVu (阿公/阿嬤)，天氣變冷了，衣服多穿一件喔！",
+    "👴 VuVu (阿公/阿嬤)，今天有比較冷喔，衣服多穿一件！",
     "💊 今天的藥吃了嗎？不要忘記喔！",
     "💧 水要多喝一點，不要等到口渴才喝。",
     "🚶 走路慢慢走，不要急，跌倒很痛喔。",
-    "👵 身體不舒服不要忍耐，按下面紅色的按鈕，我們會幫你。"
+    "👵 身體不舒服不要忍耐，按下面紅色的大按鈕，我們會幫你。"
 ]
 
-# 醫院資訊 (純文字)
+# 醫院資訊 (純文字版)
 HOSPITALS = {
     "mackay": {
         "name": "台東馬偕醫院",
-        "tag": "救命用 (中風/心臟)",
+        "tag": "🔴 救命用 (中風/心臟)",
         "addr": "台東市長沙街 303 巷 1 號",
         "tel": "089-310-150"
     },
     "chenggong": {
         "name": "成功分院",
-        "tag": "一般急診 (外傷/發燒)",
+        "tag": "🟡 急診 (外傷/發燒)",
         "addr": "成功鎮中山東路 32 號",
         "tel": "089-854-748"
     },
     "health_center": {
         "name": "長濱衛生所",
-        "tag": "門診 (拿藥/看醫生)",
+        "tag": "🟢 門診 (拿藥/看醫生)",
         "addr": "長濱鄉長濱村 5 鄰 13 號",
         "tel": "089-831-022"
     }
 }
 
-# 徵兆邏輯
+# 徵兆與分流邏輯
 SYMPTOMS_DB = {
     # --- 危急 (馬偕) ---
     "嘴歪眼斜 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 側躺 (怕嘔吐)", "⏱️ 記下發作時間"]),
@@ -166,7 +173,7 @@ SYMPTOMS_DB = {
 def page_home():
     st.title("🛡️ 守護膽曼")
     
-    # 顯示叮嚀的話 (隨機選一句，保持新鮮感，或固定顯示最重要的一句)
+    # 顯示叮嚀的話
     daily_msg = random.choice(CARE_MESSAGES)
     st.markdown(f"""
         <div class="care-message-box">
@@ -175,31 +182,37 @@ def page_home():
         </div>
     """, unsafe_allow_html=True)
     
-    st.write("") # 空白分隔
+    st.write("") 
+    st.write("") 
     
-    # 巨大的求救按鈕
-    st.markdown("<h2 style='text-align: center; color: #d32f2f; margin-bottom: 0px;'>👇 身體不舒服按這裡 👇</h2>", unsafe_allow_html=True)
-    if st.button("🆘\n\n救 命 / 不 舒 服", type="primary"):
+    # 標題指引
+    st.markdown("<h2 style='text-align: center; color: #d32f2f; margin-bottom: 10px;'>👇 身體不舒服按這裡 👇</h2>", unsafe_allow_html=True)
+    
+    # --- 關鍵修改：紅色大按鈕 ---
+    # use_container_width=True 會讓按鈕填滿寬度（置中效果）
+    # type="primary" 會吃到上面 CSS 定義的紅色大樣式
+    if st.button("🆘\n\n救 命 / 不 舒 服", type="primary", use_container_width=True):
         st.session_state['page'] = 'symptom_select'
         st.rerun()
 
+    st.write("")
+    st.write("")
     st.write("---")
     
-    # 底部靜態電話表 (不用點進去就能看)
+    # 底部靜態電話表
     with st.expander("📞 醫院電話簿 (點擊展開)", expanded=True):
-        st.markdown("**台東馬偕** (救命)：089-310150")
-        st.markdown("**成功分院** (急診)：089-854748")
-        st.markdown("**衛生所** (看病)：089-831022")
+        st.markdown("### **台東馬偕** (救命)：089-310150")
+        st.markdown("### **成功分院** (急診)：089-854748")
+        st.markdown("### **衛生所** (看病)：089-831022")
 
 def page_symptom_select():
     st.title("👀 哪裡不舒服？")
     
-    # 返回鈕
-    if st.button("🔙 回首頁"):
+    if st.button("🔙 回首頁 (按錯了)"):
         st.session_state['page'] = 'home'
         st.rerun()
     
-    # 分類籤
+    # 分類籤 (Tabs)
     tab1, tab2, tab3 = st.tabs(["🧠 頭/胸/肚子", "🦵 手腳/外傷", "💊 其他/發燒"])
     
     with tab1:
@@ -233,10 +246,11 @@ def go_to_result(symptom):
 
 def page_result():
     symptom = st.session_state['selected_symptom']
+    # 獲取資料，若無資料則回傳預設值
     level, hosp_key, sop_list = SYMPTOMS_DB.get(symptom, ("GREEN", "health_center", []))
     info = HOSPITALS[hosp_key]
     
-    # 頂部警示條
+    # 顯示頂部警示條
     if level == "RED":
         st.markdown('<div class="alert-banner bg-red">🚨 生命危急！去大醫院</div>', unsafe_allow_html=True)
     elif level == "YELLOW":
@@ -245,7 +259,7 @@ def page_result():
         st.markdown('<div class="alert-banner bg-green">🟢 一般門診！不用緊張</div>', unsafe_allow_html=True)
 
     st.write("")
-    st.markdown(f"**您的狀況**：{symptom}")
+    st.markdown(f"### 您的狀況：{symptom}")
     st.write("---")
     
     # 核心：地點顯示
@@ -254,7 +268,7 @@ def page_result():
     
     # 地址與電話 (加大顯示)
     st.markdown(f"""
-    <div style="font-size: 24px; padding: 10px;">
+    <div style="font-size: 26px; padding: 15px; background-color: #fcfcfc; border-radius: 10px; margin-top: 10px;">
     <b>說明</b>：{info['tag']}<br>
     <b>電話</b>：{info['tel']}<br>
     <b>地址</b>：{info['addr']}
@@ -273,7 +287,7 @@ def page_result():
     # 底部按鈕
     col1, col2 = st.columns(2)
     with col1:
-        if st.button("🔄 重選症狀"):
+        if st.button("🔄 重選"):
             st.session_state['page'] = 'symptom_select'
             st.rerun()
     with col2:

@@ -12,25 +12,25 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 初始化
+# 初始化 Session State
 if 'page' not in st.session_state:
     st.session_state['page'] = 'home'
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 樣式表：針對「正常大按鈕」與「清晰字體」優化
+# CSS 樣式表：針對「超大字體」優化
 st.markdown("""
     <style>
-    /* 全局字體 */
+    /* 全局字體設定 */
     html, body, [class*="css"] {
         font-family: "Microsoft JhengHei", sans-serif;
     }
     
-    /* 1. 一般選項按鈕 (徵兆選單用) - 稍微加高，好按 */
+    /* 1. 一般選項按鈕 (徵兆選單用) */
     .stButton>button {
         width: 100%;
         min-height: 70px;
-        font-size: 24px !important;
+        font-size: 24px !important; 
         font-weight: bold;
         border-radius: 12px;
         margin-bottom: 10px;
@@ -40,13 +40,15 @@ st.markdown("""
     /* 2. 🚨 紅色救命按鈕 (首頁專用) 🚨 */
     /* 針對 primary 類型的按鈕做特別設定 */
     .stButton>button[kind="primary"] {
-        height: 100px !important;       /* 高度 100px，剛好大顆 */
-        font-size: 32px !important;     /* 字體 32px，非常清楚 */
+        height: 130px !important;       /* 高度 130px：裝得下大字 */
+        font-size: 48px !important;     /* 字體 48px：超級大！ */
+        font-weight: 900 !important;    /* 字體極粗，保證清楚 */
         background-color: #d32f2f !important;
         color: white !important;
-        border: 2px solid white !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        border: 3px solid white !important;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
         transition: transform 0.1s;
+        line-height: 1.2 !important;    /* 調整行高，讓字垂直置中 */
     }
     
     /* 按下去的效果 */
@@ -128,7 +130,7 @@ HOSPITALS = {
     }
 }
 
-# 徵兆資料庫 (全開版)
+# 徵兆資料庫 (完整版)
 SYMPTOMS_DB = {
     # --- 頭部/神經 (致命) ---
     "嘴歪眼斜/單側無力 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 讓患者側躺防嗆到", "⏱️ 記下發作時間"]),
@@ -190,10 +192,12 @@ def page_home():
     
     st.write("") 
     
+    # 使用 h3 標題引導
     st.markdown("<h3 style='text-align: center; color: #d32f2f;'>👇 身體不舒服按這裡 👇</h3>", unsafe_allow_html=True)
     
-    # 【修正】單行文字，字體自動變大
-    if st.button("🆘 救命 / 身體不舒服", type="primary", use_container_width=True):
+    # 【本次修改重點：字體最大化】
+    # 字體設定在 CSS 中改為 48px，這是手機版面的一行極限
+    if st.button("🆘 救命 / 不舒服", type="primary", use_container_width=True):
         st.session_state['page'] = 'symptom_select'
         st.rerun()
 
@@ -307,7 +311,7 @@ def page_result():
             st.rerun()
 
 # ==========================================
-# 3. 主程式入口 (邏輯補齊)
+# 3. 主程式入口
 # ==========================================
 
 if st.session_state['page'] == 'home':

@@ -18,7 +18,7 @@ if 'page' not in st.session_state:
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 樣式表：針對「正常大按鈕」與「清晰字體」優化
+# CSS 樣式表：優化按鈕顯示與字體
 st.markdown("""
     <style>
     /* 全局字體 */
@@ -29,8 +29,8 @@ st.markdown("""
     /* 一般選項按鈕 (徵兆選單用) */
     .stButton>button {
         width: 100%;
-        min-height: 70px;  /* 高度適中，不會太小 */
-        font-size: 24px !important; /* 字清楚 */
+        min-height: 70px;
+        font-size: 24px !important;
         font-weight: bold;
         border-radius: 12px;
         margin-bottom: 10px;
@@ -38,7 +38,7 @@ st.markdown("""
     }
 
     /* 🚨 紅色救命按鈕 (首頁專用) 🚨 */
-    /* 高度改為 120px (適中)，字體 36px (清晰) */
+    /* 這裡設定高度 120px，字體 36px，確保清楚好按 */
     .stButton>button[kind="primary"] {
         height: 120px !important;
         font-size: 36px !important;
@@ -49,7 +49,7 @@ st.markdown("""
         animation: pulse 2s infinite;
     }
 
-    /* 呼吸燈動畫 (保留但溫和一點) */
+    /* 呼吸燈動畫 */
     @keyframes pulse {
         0% { transform: scale(1); }
         50% { transform: scale(1.02); }
@@ -130,7 +130,7 @@ HOSPITALS = {
     }
 }
 
-# ⚠️ 徵兆資料庫 (全開版 - 包含 30+ 種狀況)
+# 徵兆資料庫 (包含完整急症)
 SYMPTOMS_DB = {
     # --- 頭部/神經 (致命) ---
     "嘴歪眼斜/單側無力 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 讓患者側躺防嗆到", "⏱️ 記下發作時間"]),
@@ -216,7 +216,7 @@ def page_symptom_select():
     
     st.info("請點選下方的情況 (分類找比較快)")
     
-    # 使用 Tabs 分類，容納大量選項
+    # 使用 Tabs 分類
     tab1, tab2, tab3, tab4 = st.tabs(["🧠 頭/心臟", "🤢 肚子/內科", "🦴 跌倒/外傷", "💊 發燒/其他"])
     
     with tab1:
@@ -305,4 +305,17 @@ def page_result():
             st.session_state['page'] = 'symptom_select'
             st.rerun()
     with col2:
-        if st
+        if st.button("🏠 回首頁"):
+            st.session_state['page'] = 'home'
+            st.rerun()
+
+# ==========================================
+# 3. 主程式入口 (這個就是你之前漏掉的部分)
+# ==========================================
+
+if st.session_state['page'] == 'home':
+    page_home()
+elif st.session_state['page'] == 'symptom_select':
+    page_symptom_select()
+elif st.session_state['page'] == 'result':
+    page_result()

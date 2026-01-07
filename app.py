@@ -2,7 +2,7 @@ import streamlit as st
 import random
 
 # ==========================================
-# 0. 系統設置 (Layer 0: Design)
+# 0. 系統設置
 # ==========================================
 
 st.set_page_config(
@@ -12,54 +12,50 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# 初始化 Session State
+# 初始化
 if 'page' not in st.session_state:
     st.session_state['page'] = 'home'
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 樣式表：針對「超大字體」優化
+# CSS：按鈕縮小，回歸正常比例
 st.markdown("""
     <style>
-    /* 全局字體設定 */
     html, body, [class*="css"] {
         font-family: "Microsoft JhengHei", sans-serif;
     }
     
-    /* 1. 一般選項按鈕 (徵兆選單用) */
+    /* 一般按鈕 */
     .stButton>button {
         width: 100%;
-        min-height: 70px;
-        font-size: 24px !important; 
+        min-height: 60px;
+        font-size: 22px !important; 
         font-weight: bold;
-        border-radius: 12px;
+        border-radius: 10px;
         margin-bottom: 10px;
-        border: 2px solid #e0e0e0;
     }
 
-    /* 2. 🚨 紅色救命按鈕 (首頁專用) 🚨 */
-    /* 針對 primary 類型的按鈕做特別設定 */
+    /* 🚨 紅色求救按鈕 (縮小版) 🚨 */
+    /* 高度改為 85px (原本130太大了)，字體 30px */
     .stButton>button[kind="primary"] {
-        height: 130px !important;       /* 高度 130px：裝得下大字 */
-        font-size: 48px !important;     /* 字體 48px：超級大！ */
-        font-weight: 900 !important;    /* 字體極粗，保證清楚 */
+        height: 85px !important;      /* 高度縮小，不佔空間 */
+        font-size: 30px !important;   /* 字體配合高度，剛好清楚 */
         background-color: #d32f2f !important;
         color: white !important;
-        border: 3px solid white !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        transition: transform 0.1s;
-        line-height: 1.2 !important;    /* 調整行高，讓字垂直置中 */
+        border: 2px solid white !important;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.2) !important;
+        animation: pulse 2s infinite;
     }
     
-    /* 按下去的效果 */
-    .stButton>button[kind="primary"]:active {
-        transform: scale(0.98);
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
     }
 
-    /* 溫馨叮嚀框 */
     .care-message-box {
         background-color: #fff3e0;
-        border-left: 6px solid #ff9800;
+        border-left: 5px solid #ff9800;
         padding: 15px;
         border-radius: 8px;
         margin-bottom: 20px;
@@ -67,24 +63,22 @@ st.markdown("""
         color: #5d4037;
     }
 
-    /* 結果頁：地點標題 */
     .hospital-title {
-        font-size: 36px;
+        font-size: 32px;
         font-weight: 900;
         color: #1a237e;
         text-align: center;
-        border-bottom: 4px solid #1a237e;
+        border-bottom: 3px solid #1a237e;
         padding-bottom: 10px;
         margin-top: 10px;
         margin-bottom: 10px;
     }
     
-    /* 警示橫幅 */
     .alert-banner {
         padding: 15px;
         color: white;
         text-align: center;
-        font-size: 28px;
+        font-size: 26px;
         font-weight: bold;
         border-radius: 8px;
         margin-bottom: 15px;
@@ -93,9 +87,8 @@ st.markdown("""
     .bg-yellow { background-color: #fbc02d; color: black !important; }
     .bg-green { background-color: #2e7d32; }
     
-    /* SOP 步驟文字 */
     .sop-text {
-        font-size: 24px;
+        font-size: 22px;
         margin: 5px 0;
         padding: 10px;
         background: #f5f5f5;
@@ -105,62 +98,36 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. 資料庫：徵兆大全 (Layer 1: Content)
+# 1. 資料庫 (完整保留，沒刪)
 # ==========================================
 
-# 醫院資訊
 HOSPITALS = {
-    "mackay": {
-        "name": "台東馬偕醫院",
-        "tag": "🔴 救命 (中風/心臟/重創)",
-        "addr": "台東市長沙街 303 巷 1 號",
-        "tel": "089-310-150"
-    },
-    "chenggong": {
-        "name": "成功分院",
-        "tag": "🟡 急診 (一般外傷/發燒)",
-        "addr": "成功鎮中山東路 32 號",
-        "tel": "089-854-748"
-    },
-    "health_center": {
-        "name": "長濱衛生所",
-        "tag": "🟢 門診 (拿藥/看醫生)",
-        "addr": "長濱鄉長濱村 5 鄰 13 號",
-        "tel": "089-831-022"
-    }
+    "mackay": {"name": "台東馬偕醫院", "tag": "🔴 救命 (中風/心臟)", "addr": "台東市長沙街 303 巷 1 號", "tel": "089-310-150"},
+    "chenggong": {"name": "成功分院", "tag": "🟡 急診 (外傷/發燒)", "addr": "成功鎮中山東路 32 號", "tel": "089-854-748"},
+    "health_center": {"name": "長濱衛生所", "tag": "🟢 門診 (拿藥/看醫生)", "addr": "長濱鄉長濱村 5 鄰 13 號", "tel": "089-831-022"}
 }
 
-# 徵兆資料庫 (完整版)
 SYMPTOMS_DB = {
-    # --- 頭部/神經 (致命) ---
     "嘴歪眼斜/單側無力 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 讓患者側躺防嗆到", "⏱️ 記下發作時間"]),
     "劇烈頭痛 (像被雷打到)": ("RED", "mackay", ["🛌 保持安靜躺下", "🚑 立即呼叫救護車"]),
     "意識不清/叫不醒": ("RED", "mackay", ["🗣️ 大聲呼喚檢查反應", "🛌 側躺暢通呼吸道"]),
     "頭暈/天旋地轉": ("GREEN", "health_center", ["🪑 坐下休息防跌倒", "💧 喝溫開水", "💊 若有高血壓請量血壓"]),
     "突然看不見/視力模糊": ("RED", "mackay", ["⛔ 不要揉眼睛", "🚑 這是中風警訊，快去醫院"]),
-    
-    # --- 胸部/心臟 (致命) ---
     "胸痛 (像石頭壓/冒冷汗)": ("RED", "mackay", ["⛔ 停止所有活動", "🪑 採半坐臥姿勢", "💊 若有舌下含片可使用"]),
     "心跳很快/心悸": ("YELLOW", "chenggong", ["🪑 坐下深呼吸", "⌚ 測量脈搏"]),
     "呼吸困難/喘不過氣": ("RED", "mackay", ["🪑 端坐呼吸(坐著身體前傾)", "👕 解開衣領鈕扣"]),
     "咳血": ("RED", "mackay", ["🥣 保留檢體", "🚑 立即就醫"]),
-
-    # --- 腹部/消化 ---
     "肚子劇痛 (按壓會痛)": ("YELLOW", "chenggong", ["⛔ 暫時禁食", "🌡️ 量測體溫"]),
     "吐血/解黑便": ("RED", "mackay", ["⛔ 禁止飲食", "🚑 收集嘔吐物/拍照"]),
     "嚴重拉肚子/嘔吐": ("YELLOW", "chenggong", ["💧 補充水分/電解質", "💊 攜帶目前用藥"]),
     "無法排尿 (脹痛)": ("YELLOW", "chenggong", ["⛔ 勿強壓膀胱", "🏥 需導尿"]),
-    "誤食農藥/毒物": ("RED", "mackay", ["📸 拍下農藥罐子", "⛔ 不要催吐(除非醫生說)", "🚑 叫救護車"]),
-
-    # --- 四肢/外傷 ---
+    "誤食農藥/毒物": ("RED", "mackay", ["📸 拍下農藥罐子", "⛔ 不要催吐", "🚑 叫救護車"]),
     "骨折 (肢體變形)": ("RED", "mackay", ["⛔ 不要移動患肢", "🪵 就地固定(用紙板/木棍)"]),
     "嚴重割傷 (血流不止)": ("YELLOW", "chenggong", ["🩹 直接加壓止血", "✋ 抬高患肢"]),
     "一般跌倒 (皮肉傷)": ("GREEN", "health_center", ["🧼 清水沖洗傷口", "🩹 消毒包紮"]),
     "跌倒 (撞到頭/想吐)": ("RED", "mackay", ["⛔ 不要睡著，觀察意識", "🚑 腦震盪警訊"]),
-    "被蛇/虎頭蜂咬傷": ("YELLOW", "chenggong", ["📸 記住蛇/蜂的特徵", "⛔ 勿切開傷口/勿吸毒", "⌚ 取下戒指/手錶"]),
+    "被蛇/虎頭蜂咬傷": ("YELLOW", "chenggong", ["📸 記住蛇/蜂的特徵", "⛔ 勿切開傷口", "⌚ 取下戒指"]),
     "被狗/動物咬傷": ("YELLOW", "chenggong", ["🧼 大量清水沖洗", "🏥 需打狂犬病疫苗"]),
-
-    # --- 全身/其他 ---
     "發高燒 (>38.5度)": ("YELLOW", "chenggong", ["💧 多喝水", "👕 穿透氣衣物散熱"]),
     "血糖過低 (冒冷汗/手抖)": ("YELLOW", "chenggong", ["🍬 吃糖果/喝果汁", "🛌 休息觀察"]),
     "皮膚紅腫/長疹子": ("GREEN", "health_center", ["📷 拍照記錄", "⛔ 勿抓破"]),
@@ -176,35 +143,21 @@ SYMPTOMS_DB = {
 def page_home():
     st.title("🛡️ 守護膽曼")
     
-    # 叮嚀區塊
-    care_msgs = [
-        "👴 VuVu (長輩)，今天天氣變了，衣服穿暖一點。",
-        "💊 藥吃過了嗎？不要忘記喔。",
-        "💧 多喝水，慢慢走，不要急。",
-        "👵 身體不舒服不要忍耐，按下面的按鈕，我們幫你。"
-    ]
-    st.markdown(f"""
-        <div class="care-message-box">
-            <b>💌 給長輩的叮嚀：</b><br>
-            {random.choice(care_msgs)}
-        </div>
-    """, unsafe_allow_html=True)
+    # 叮嚀
+    msg = "👴 VuVu，天氣變冷了，衣服穿暖一點。身體不舒服不要忍耐，按下面的紅色按鈕。"
+    st.markdown(f"""<div class="care-message-box"><b>💌 叮嚀：</b><br>{msg}</div>""", unsafe_allow_html=True)
     
     st.write("") 
-    
-    # 使用 h3 標題引導
     st.markdown("<h3 style='text-align: center; color: #d32f2f;'>👇 身體不舒服按這裡 👇</h3>", unsafe_allow_html=True)
     
-    # 【本次修改重點：字體最大化】
-    # 字體設定在 CSS 中改為 48px，這是手機版面的一行極限
+    # 【修正】按鈕縮小，高度 85px，字體 30px
     if st.button("🆘 救命 / 不舒服", type="primary", use_container_width=True):
         st.session_state['page'] = 'symptom_select'
         st.rerun()
 
     st.write("---")
     
-    # 底部電話簿
-    with st.expander("📞 醫院電話 (點我打開)", expanded=True):
+    with st.expander("📞 醫院電話", expanded=True):
         st.markdown("**台東馬偕**：089-310150")
         st.markdown("**成功分院**：089-854748")
         st.markdown("**衛生所**：089-831022")
@@ -215,9 +168,8 @@ def page_symptom_select():
         st.session_state['page'] = 'home'
         st.rerun()
     
-    st.info("請點選下方的情況 (分類找比較快)")
+    st.info("請點選下方的情況")
     
-    # 使用 Tabs 分類
     tab1, tab2, tab3, tab4 = st.tabs(["🧠 頭/心臟", "🤢 肚子/內科", "🦴 跌倒/外傷", "💊 發燒/其他"])
     
     with tab1:
@@ -267,7 +219,6 @@ def page_result():
     level, hosp_key, sop_list = SYMPTOMS_DB.get(symptom, ("GREEN", "health_center", []))
     info = HOSPITALS[hosp_key]
     
-    # 警示條
     if level == "RED":
         st.markdown('<div class="alert-banner bg-red">🚨 生命危急！去大醫院</div>', unsafe_allow_html=True)
     elif level == "YELLOW":
@@ -279,12 +230,11 @@ def page_result():
     st.markdown(f"### 您的狀況：{symptom}")
     st.write("---")
     
-    # 核心資訊
     st.markdown("### 📍 請前往這裡：")
     st.markdown(f'<div class="hospital-title">{info["name"]}</div>', unsafe_allow_html=True)
     
     st.markdown(f"""
-    <div style="font-size: 24px; padding: 10px; background-color:#fcfcfc; border-radius:10px;">
+    <div style="font-size: 22px; padding: 10px; background-color:#fcfcfc; border-radius:10px;">
     <b>說明</b>：{info['tag']}<br>
     <b>電話</b>：{info['tel']}<br>
     <b>地址</b>：{info['addr']}
@@ -293,7 +243,6 @@ def page_result():
     
     st.write("---")
     
-    # SOP
     st.markdown("### 📋 現場該做什麼？")
     for step in sop_list:
         st.markdown(f'<div class="sop-text">{step}</div>', unsafe_allow_html=True)

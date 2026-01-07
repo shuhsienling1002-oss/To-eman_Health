@@ -1,219 +1,227 @@
 import streamlit as st
-import datetime
+import random
 
 # ==========================================
-# 0. 系統設置 (Layer 1: Physics)
+# 0. 系統設置與視覺優化 (Layer 0: Design)
 # ==========================================
 
 st.set_page_config(
-    page_title="膽曼守護 v1.1",
+    page_title="守護膽曼",
     page_icon="🛡️",
     layout="centered",
-    initial_sidebar_state="collapsed" # 預設收起側邊欄，減少干擾
+    initial_sidebar_state="collapsed"
 )
 
-# 初始化 Session State
+# 初始化狀態
 if 'page' not in st.session_state:
     st.session_state['page'] = 'home'
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 優化：針對「選項變多」進行排版優化
+# CSS 樣式表：針對高齡者優化 (大字體、高對比、溫暖配色)
 st.markdown("""
     <style>
+    /* 全局字體加大 */
+    html, body, [class*="css"] {
+        font-family: "Microsoft JhengHei", sans-serif;
+    }
+    
+    /* 巨大按鈕樣式 */
     .stButton>button {
         width: 100%;
-        height: 80px; /* 稍微調低高度以容納更多按鈕 */
-        font-size: 24px !important;
+        height: 85px;
+        font-size: 26px !important;
         font-weight: bold;
-        border-radius: 12px;
-        margin-bottom: 10px;
+        border-radius: 15px;
+        margin-bottom: 12px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
     }
-    /* 紅色危急區塊 */
-    .critical-header {
-        color: white;
+    
+    /* 首頁紅色求救按鈕特別強化 */
+    .stButton>button[kind="primary"] {
+        height: 150px;
+        font-size: 40px !important;
         background-color: #d32f2f;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 10px;
+        border: 2px solid white;
+        animation: pulse 2s infinite;
     }
-    /* 黃色警告區塊 */
-    .warning-header {
-        color: black;
-        background-color: #ffeb3b;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 10px;
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+        100% { transform: scale(1); }
     }
-    /* 綠色一般區塊 */
-    .normal-header {
-        color: white;
-        background-color: #2e7d32;
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        font-size: 28px;
-        font-weight: bold;
-        margin-bottom: 10px;
+
+    /* 叮嚀小語區塊 */
+    .care-message-box {
+        background-color: #fff3e0; /* 暖橘色背景 */
+        border-left: 6px solid #ff9800;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+        font-size: 22px;
+        color: #5d4037;
+        line-height: 1.6;
     }
-    /* 地點大字體 */
-    .location-text {
-        font-size: 36px;
+
+    /* 醫院名稱超大字體 */
+    .hospital-title {
+        font-size: 42px;
         font-weight: 900;
         color: #1a237e;
-        border-bottom: 3px solid #1a237e;
-        padding-bottom: 10px;
+        text-align: center;
+        border: 3px solid #1a237e;
+        padding: 15px;
+        border-radius: 10px;
+        margin-top: 10px;
+        background-color: #e8eaf6;
+    }
+
+    /* 警示橫幅 */
+    .alert-banner {
+        padding: 15px;
+        color: white;
+        text-align: center;
+        font-size: 28px;
+        font-weight: bold;
+        border-radius: 8px;
+        margin-bottom: 15px;
+    }
+    .bg-red { background-color: #c62828; }
+    .bg-yellow { background-color: #fbc02d; color: black !important; }
+    .bg-green { background-color: #2e7d32; }
+    
+    /* 步驟清單 */
+    .sop-step {
+        font-size: 24px;
+        margin-bottom: 10px;
+        padding: 10px;
+        background-color: #f5f5f5;
+        border-radius: 5px;
     }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. 醫療資源與徵兆資料庫 (Database)
+# 1. 資料庫：叮嚀語與醫療資訊 (Layer 1: Content)
 # ==========================================
 
-# 醫院靜態資料 (純文字與電話)
+# 老人的叮嚀語錄 (隨機顯示或固定顯示)
+CARE_MESSAGES = [
+    "👴 VuVu (阿公/阿嬤)，天氣變冷了，衣服多穿一件喔！",
+    "💊 今天的藥吃了嗎？不要忘記喔！",
+    "💧 水要多喝一點，不要等到口渴才喝。",
+    "🚶 走路慢慢走，不要急，跌倒很痛喔。",
+    "👵 身體不舒服不要忍耐，按下面紅色的按鈕，我們會幫你。"
+]
+
+# 醫院資訊 (純文字)
 HOSPITALS = {
     "mackay": {
         "name": "台東馬偕醫院",
-        "desc": "重度急救 (救命用)",
-        "address": "台東市長沙街303巷1號",
-        "tel": "089-310150"
+        "tag": "救命用 (中風/心臟)",
+        "addr": "台東市長沙街 303 巷 1 號",
+        "tel": "089-310-150"
     },
     "chenggong": {
-        "name": "部立台東成功分院",
-        "desc": "一般急診 (外傷/發燒)",
-        "address": "成功鎮中山東路32號",
-        "tel": "089-854748"
+        "name": "成功分院",
+        "tag": "一般急診 (外傷/發燒)",
+        "addr": "成功鎮中山東路 32 號",
+        "tel": "089-854-748"
     },
     "health_center": {
-        "name": "長濱鄉衛生所",
-        "desc": "門診/拿藥 (非急診)",
-        "address": "長濱鄉長濱村5鄰13號",
-        "tel": "089-831022"
+        "name": "長濱衛生所",
+        "tag": "門診 (拿藥/看醫生)",
+        "addr": "長濱鄉長濱村 5 鄰 13 號",
+        "tel": "089-831-022"
     }
 }
 
-# 徵兆分流邏輯 (擴充至上限)
-# 格式: "症狀名稱": ("等級", "對應醫院代碼", "現場處理建議")
+# 徵兆邏輯
 SYMPTOMS_DB = {
-    # --- 頭部/神經 (Head/Neuro) ---
-    "嘴歪眼斜/單側無力 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 讓患者側躺防嗆到", "⏱️ 記下發作時間"]),
-    "劇烈頭痛 (像雷擊)": ("RED", "mackay", ["🛌 保持安靜躺下", "🚑 立即呼叫救護車"]),
-    "意識不清/叫不醒": ("RED", "mackay", ["🗣️ 大聲呼喚檢查反應", "🛌 側躺暢通呼吸道"]),
-    "頭暈/天旋地轉": ("GREEN", "health_center", ["🪑 坐下休息防跌倒", "💧 喝溫開水"]),
+    # --- 危急 (馬偕) ---
+    "嘴歪眼斜 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 側躺 (怕嘔吐)", "⏱️ 記下發作時間"]),
+    "胸口痛 (像石頭壓)": ("RED", "mackay", ["⛔ 停止走動", "🪑 坐著休息", "💊 含舌下片(若有)"]),
+    "意識不清/叫不醒": ("RED", "mackay", ["🗣️ 大聲叫他", "🛌 保持側躺"]),
+    "嚴重骨折 (變形)": ("RED", "mackay", ["⛔ 不要亂動患肢", "🪵 找東西固定"]),
     
-    # --- 胸腹/內科 (Chest/Abdomen) ---
-    "胸痛 (像石頭壓/冒冷汗)": ("RED", "mackay", ["⛔ 停止所有活動", "🪑 採半坐臥姿勢", "💊 若有舌下含片可使用"]),
-    "呼吸困難/喘不過氣": ("RED", "mackay", ["🪑 端坐呼吸(坐著身體前傾)", "👕 解開衣領鈕扣"]),
-    "吐血/解黑便": ("RED", "mackay", ["⛔ 禁止飲食", "🚑 收集嘔吐物供醫師參考"]),
-    "肚子劇痛 (按壓會痛)": ("YELLOW", "chenggong", ["⛔ 暫時禁食", "🌡️ 量測體溫"]),
-    "嚴重拉肚子/嘔吐": ("YELLOW", "chenggong", ["💧 補充水分/電解質", "💊 攜帶目前用藥"]),
+    # --- 緊急 (成功) ---
+    "肚子劇痛": ("YELLOW", "chenggong", ["⛔ 暫時不要吃東西", "🌡️ 量體溫"]),
+    "割傷流血不止": ("YELLOW", "chenggong", ["🩹 用力按住傷口", "✋ 手舉高"]),
+    "嚴重跌倒 (痛)": ("YELLOW", "chenggong", ["⛔ 脊椎痛就不要動", "🚑 叫救護車搬運"]),
+    "發高燒 (>38度)": ("YELLOW", "chenggong", ["💧 多喝水", "👕 穿透氣衣服"]),
+    "被動物/蛇咬傷": ("YELLOW", "chenggong", ["📸 記住蛇的樣子", "⛔ 不要用嘴吸毒"]),
     
-    # --- 四肢/外傷 (Limbs/Trauma) ---
-    "骨折 (肢體變形)": ("RED", "mackay", ["⛔ 不要移動患肢", "🪵 就地固定(用紙板/木棍)"]),
-    "嚴重割傷 (血流不止)": ("YELLOW", "chenggong", ["🩹 直接加壓止血", "✋ 抬高患肢"]),
-    "被蛇/動物咬傷": ("YELLOW", "chenggong", ["⛔ 勿切開傷口/勿吸毒", "📸 拍下蛇/動物特徵", "⌚ 取下戒指/手錶"]),
-    "跌倒 (無法站起)": ("YELLOW", "chenggong", ["⛔ 不要硬拉起來(怕脊椎傷)", "🚑 呼叫 119 協助搬運"]),
-    "跌倒 (可站起/輕微)": ("GREEN", "health_center", ["🧊 冰敷紅腫處", "👀 觀察有無頭暈嘔吐"]),
-    
-    # --- 其他/慢性 (Others) ---
-    "發高燒 (>38.5度)": ("YELLOW", "chenggong", ["💧 多喝水", "👕 穿透氣衣物散熱"]),
-    "尿不出來 (脹痛)": ("YELLOW", "chenggong", ["⛔ 勿強壓膀胱", "🏥 需導尿"]),
-    "眼睛劇痛/視力模糊": ("YELLOW", "chenggong", ["⛔ 勿揉眼睛", "🕶️ 戴墨鏡保護"]),
-    "皮膚紅腫/長疹子": ("GREEN", "health_center", ["📷 拍照記錄", "⛔ 勿抓破"]),
-    "慢性拿藥/復健": ("GREEN", "health_center", ["💊 攜帶健保卡", "📅 確認醫生班表"])
+    # --- 一般 (衛生所) ---
+    "頭暈/輕微頭痛": ("GREEN", "health_center", ["🪑 坐下休息", "💧 喝溫水"]),
+    "眼睛癢/痛": ("GREEN", "health_center", ["⛔ 不要揉眼睛", "🕶️ 戴墨鏡"]),
+    "慢性拿藥": ("GREEN", "health_center", ["💊 帶健保卡", "📅 確認醫生時間"]),
+    "皮膚癢/紅腫": ("GREEN", "health_center", ["📸 拍照給醫生看", "⛔ 不要抓破"])
 }
 
 # ==========================================
-# 2. 邏輯處理
-# ==========================================
-
-def get_triage_info(symptom_name):
-    level, hospital_key, sop_steps = SYMPTOMS_DB.get(symptom_name, ("GREEN", "health_center", []))
-    hospital_info = HOSPITALS[hospital_key]
-    
-    # 定義顯示標題與顏色
-    if level == "RED":
-        header_html = f'<div class="critical-header">🚨 生命危急 (直送大醫院)</div>'
-        action_text = "🚑 立刻叫救護車 (119)"
-    elif level == "YELLOW":
-        header_html = f'<div class="warning-header">⚠️ 需要急診 (盡快就醫)</div>'
-        action_text = "🚗 請親友接送 / 叫車"
-    else:
-        header_html = f'<div class="normal-header">🟢 一般門診 (觀察/拿藥)</div>'
-        action_text = "👨‍⚕️ 前往衛生所 / 預約"
-        
-    return header_html, hospital_info, action_text, sop_steps
-
-# ==========================================
-# 3. 介面呈現
+# 2. 頁面邏輯 (UI Functions)
 # ==========================================
 
 def page_home():
-    st.title("🛡️ 膽曼守護")
+    st.title("🛡️ 守護膽曼")
+    
+    # 顯示叮嚀的話 (隨機選一句，保持新鮮感，或固定顯示最重要的一句)
+    daily_msg = random.choice(CARE_MESSAGES)
+    st.markdown(f"""
+        <div class="care-message-box">
+            <b>💌 給長輩的叮嚀：</b><br>
+            {daily_msg}
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("") # 空白分隔
+    
+    # 巨大的求救按鈕
+    st.markdown("<h2 style='text-align: center; color: #d32f2f; margin-bottom: 0px;'>👇 身體不舒服按這裡 👇</h2>", unsafe_allow_html=True)
+    if st.button("🆘\n\n救 命 / 不 舒 服", type="primary"):
+        st.session_state['page'] = 'symptom_select'
+        st.rerun()
+
     st.write("---")
     
-    # 極簡首頁，直接引導至症狀選擇
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("功能選單")
-        # 保留簽到但縮小佔比，或單純作為一個選項
-        if st.button("☀️ 報平安 (簽到)"):
-            st.toast("✅ 已傳送平安訊號")
-    
-    with col2:
-        st.error("緊急功能")
-        # 這是主要入口
-        if st.button("🆘 身體不舒服", type="primary"):
-            st.session_state['page'] = 'symptom_select'
-            st.rerun()
-
-    st.markdown("### 📢 最新公告")
-    st.info("本週二下午：高醫眼科巡迴醫療 (衛生所)")
+    # 底部靜態電話表 (不用點進去就能看)
+    with st.expander("📞 醫院電話簿 (點擊展開)", expanded=True):
+        st.markdown("**台東馬偕** (救命)：089-310150")
+        st.markdown("**成功分院** (急診)：089-854748")
+        st.markdown("**衛生所** (看病)：089-831022")
 
 def page_symptom_select():
-    st.title("👀 請問是哪一種狀況？")
-    if st.button("🔙 返回"):
+    st.title("👀 哪裡不舒服？")
+    
+    # 返回鈕
+    if st.button("🔙 回首頁"):
         st.session_state['page'] = 'home'
         st.rerun()
     
-    # 使用 Tabs 分類，避免畫面太長老人滑不到
-    tab1, tab2, tab3, tab4 = st.tabs(["🧠 頭部/神經", "🫀 胸腹/內科", "🦵 外傷/骨折", "💊 其他狀況"])
+    # 分類籤
+    tab1, tab2, tab3 = st.tabs(["🧠 頭/胸/肚子", "🦵 手腳/外傷", "💊 其他/發燒"])
     
     with tab1:
-        st.subheader("頭痛、頭暈、意識")
+        st.info("頭暈、胸口痛、肚子痛...")
         cols = st.columns(2)
-        symptoms = ["嘴歪眼斜/單側無力 (中風)", "劇烈頭痛 (像雷擊)", "意識不清/叫不醒", "頭暈/天旋地轉"]
+        symptoms = ["嘴歪眼斜 (中風)", "胸口痛 (像石頭壓)", "意識不清/叫不醒", "肚子劇痛", "頭暈/輕微頭痛"]
         for i, sym in enumerate(symptoms):
             if cols[i % 2].button(sym):
                 go_to_result(sym)
 
     with tab2:
-        st.subheader("胸口痛、肚子痛、嘔吐")
+        st.info("跌倒、流血、骨折...")
         cols = st.columns(2)
-        symptoms = ["胸痛 (像石頭壓/冒冷汗)", "呼吸困難/喘不過氣", "吐血/解黑便", "肚子劇痛 (按壓會痛)", "嚴重拉肚子/嘔吐"]
+        symptoms = ["嚴重骨折 (變形)", "割傷流血不止", "嚴重跌倒 (痛)", "被動物/蛇咬傷"]
         for i, sym in enumerate(symptoms):
             if cols[i % 2].button(sym):
                 go_to_result(sym)
                 
     with tab3:
-        st.subheader("跌倒、流血、被動物咬")
+        st.info("發燒、眼睛、皮膚...")
         cols = st.columns(2)
-        symptoms = ["骨折 (肢體變形)", "嚴重割傷 (血流不止)", "被蛇/動物咬傷", "跌倒 (無法站起)", "跌倒 (可站起/輕微)"]
-        for i, sym in enumerate(symptoms):
-            if cols[i % 2].button(sym):
-                go_to_result(sym)
-                
-    with tab4:
-        st.subheader("發燒、小便、皮膚、拿藥")
-        cols = st.columns(2)
-        symptoms = ["發高燒 (>38.5度)", "尿不出來 (脹痛)", "眼睛劇痛/視力模糊", "皮膚紅腫/長疹子", "慢性拿藥/復健"]
+        symptoms = ["發高燒 (>38度)", "眼睛癢/痛", "皮膚癢/紅腫", "慢性拿藥"]
         for i, sym in enumerate(symptoms):
             if cols[i % 2].button(sym):
                 go_to_result(sym)
@@ -225,37 +233,56 @@ def go_to_result(symptom):
 
 def page_result():
     symptom = st.session_state['selected_symptom']
-    header_html, hospital, action, sop = get_triage_info(symptom)
+    level, hosp_key, sop_list = SYMPTOMS_DB.get(symptom, ("GREEN", "health_center", []))
+    info = HOSPITALS[hosp_key]
     
-    st.markdown(header_html, unsafe_allow_html=True)
+    # 頂部警示條
+    if level == "RED":
+        st.markdown('<div class="alert-banner bg-red">🚨 生命危急！去大醫院</div>', unsafe_allow_html=True)
+    elif level == "YELLOW":
+        st.markdown('<div class="alert-banner bg-yellow">⚠️ 需看急診！盡快就醫</div>', unsafe_allow_html=True)
+    else:
+        st.markdown('<div class="alert-banner bg-green">🟢 一般門診！不用緊張</div>', unsafe_allow_html=True)
+
+    st.write("")
+    st.markdown(f"**您的狀況**：{symptom}")
+    st.write("---")
+    
+    # 核心：地點顯示
+    st.markdown("### 📍 請前往這裡：")
+    st.markdown(f'<div class="hospital-title">{info["name"]}</div>', unsafe_allow_html=True)
+    
+    # 地址與電話 (加大顯示)
+    st.markdown(f"""
+    <div style="font-size: 24px; padding: 10px;">
+    <b>說明</b>：{info['tag']}<br>
+    <b>電話</b>：{info['tel']}<br>
+    <b>地址</b>：{info['addr']}
+    </div>
+    """, unsafe_allow_html=True)
     
     st.write("---")
-    st.markdown(f"**發生狀況**：{symptom}")
-    st.markdown(f"**建議行動**：{action}")
     
-    st.write("---")
-    st.markdown("### 📍 前往地點")
-    # 這裡只顯示純文字地點，不顯示地圖
-    st.markdown(f'<div class="location-text">{hospital["name"]}</div>', unsafe_allow_html=True)
-    st.markdown(f"**類別**：{hospital['desc']}")
-    st.markdown(f"**地址**：{hospital['address']}")
-    st.markdown(f"**電話**：{hospital['tel']}")
-    
-    st.write("---")
-    st.markdown("### 📋 現場處理 (SOP)")
-    for step in sop:
-        st.markdown(f"### {step}") # 使用 h3 讓字體更大
+    # 現場 SOP
+    st.markdown("### 📋 現在該做什麼？")
+    for step in sop_list:
+        st.markdown(f'<div class="sop-step">{step}</div>', unsafe_allow_html=True)
         
     st.write("---")
-    if st.button("🔄 重新選擇"):
-        st.session_state['page'] = 'symptom_select'
-        st.rerun()
-    if st.button("🏠 回首頁"):
-        st.session_state['page'] = 'home'
-        st.rerun()
+    
+    # 底部按鈕
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🔄 重選症狀"):
+            st.session_state['page'] = 'symptom_select'
+            st.rerun()
+    with col2:
+        if st.button("🏠 回首頁"):
+            st.session_state['page'] = 'home'
+            st.rerun()
 
 # ==========================================
-# 主流程
+# 3. 主程式入口
 # ==========================================
 
 if st.session_state['page'] == 'home':

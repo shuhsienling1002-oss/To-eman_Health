@@ -36,10 +36,10 @@ st.markdown("""
     }
 
     /* 🚨 紅色求救按鈕 (縮小版) 🚨 */
-    /* 高度改為 85px (原本130太大了)，字體 30px */
+    /* 高度改為 85px，字體 30px */
     .stButton>button[kind="primary"] {
-        height: 85px !important;      /* 高度縮小，不佔空間 */
-        font-size: 30px !important;   /* 字體配合高度，剛好清楚 */
+        height: 85px !important;      
+        font-size: 30px !important;   
         background-color: #d32f2f !important;
         color: white !important;
         border: 2px solid white !important;
@@ -98,7 +98,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. 資料庫 (完整保留，沒刪)
+# 1. 資料庫 (全中文)
 # ==========================================
 
 HOSPITALS = {
@@ -143,14 +143,14 @@ SYMPTOMS_DB = {
 def page_home():
     st.title("🛡️ 守護膽曼")
     
-    # 叮嚀
-    msg = "👴 VuVu，天氣變冷了，衣服穿暖一點。身體不舒服不要忍耐，按下面的紅色按鈕。"
+    # 叮嚀 (全部改成中文)
+    msg = "👴 阿公阿嬤，天氣變冷了，衣服穿暖一點。身體不舒服不要忍耐，按下面的紅色按鈕。"
     st.markdown(f"""<div class="care-message-box"><b>💌 叮嚀：</b><br>{msg}</div>""", unsafe_allow_html=True)
     
     st.write("") 
     st.markdown("<h3 style='text-align: center; color: #d32f2f;'>👇 身體不舒服按這裡 👇</h3>", unsafe_allow_html=True)
     
-    # 【修正】按鈕縮小，高度 85px，字體 30px
+    # 按鈕
     if st.button("🆘 救命 / 不舒服", type="primary", use_container_width=True):
         st.session_state['page'] = 'symptom_select'
         st.rerun()

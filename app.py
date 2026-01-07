@@ -18,7 +18,7 @@ if 'page' not in st.session_state:
 if 'selected_symptom' not in st.session_state:
     st.session_state['selected_symptom'] = None
 
-# CSS 樣式表：優化按鈕顯示與字體
+# CSS 樣式表：針對「正常大按鈕」與「清晰字體」優化
 st.markdown("""
     <style>
     /* 全局字體 */
@@ -26,7 +26,7 @@ st.markdown("""
         font-family: "Microsoft JhengHei", sans-serif;
     }
     
-    /* 一般選項按鈕 (徵兆選單用) */
+    /* 1. 一般選項按鈕 (徵兆選單用) - 稍微加高，好按 */
     .stButton>button {
         width: 100%;
         min-height: 70px;
@@ -37,23 +37,21 @@ st.markdown("""
         border: 2px solid #e0e0e0;
     }
 
-    /* 🚨 紅色救命按鈕 (首頁專用) 🚨 */
-    /* 這裡設定高度 120px，字體 36px，確保清楚好按 */
+    /* 2. 🚨 紅色救命按鈕 (首頁專用) 🚨 */
+    /* 針對 primary 類型的按鈕做特別設定 */
     .stButton>button[kind="primary"] {
-        height: 120px !important;
-        font-size: 36px !important;
+        height: 100px !important;       /* 高度 100px，剛好大顆 */
+        font-size: 32px !important;     /* 字體 32px，非常清楚 */
         background-color: #d32f2f !important;
         color: white !important;
         border: 2px solid white !important;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
-        animation: pulse 2s infinite;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+        transition: transform 0.1s;
     }
-
-    /* 呼吸燈動畫 */
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.02); }
-        100% { transform: scale(1); }
+    
+    /* 按下去的效果 */
+    .stButton>button[kind="primary"]:active {
+        transform: scale(0.98);
     }
 
     /* 溫馨叮嚀框 */
@@ -69,7 +67,7 @@ st.markdown("""
 
     /* 結果頁：地點標題 */
     .hospital-title {
-        font-size: 40px;
+        font-size: 36px;
         font-weight: 900;
         color: #1a237e;
         text-align: center;
@@ -130,7 +128,7 @@ HOSPITALS = {
     }
 }
 
-# 徵兆資料庫 (包含完整急症)
+# 徵兆資料庫 (全開版)
 SYMPTOMS_DB = {
     # --- 頭部/神經 (致命) ---
     "嘴歪眼斜/單側無力 (中風)": ("RED", "mackay", ["⛔ 絕對不可餵食/餵藥", "🛌 讓患者側躺防嗆到", "⏱️ 記下發作時間"]),
@@ -192,11 +190,10 @@ def page_home():
     
     st.write("") 
     
-    st.markdown("<h2 style='text-align: center; color: #d32f2f;'>👇 身體不舒服按這裡 👇</h2>", unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align: center; color: #d32f2f;'>👇 身體不舒服按這裡 👇</h3>", unsafe_allow_html=True)
     
-    # 【關鍵修改】使用 use_container_width=True 讓按鈕寬度撐滿容器
-    # 高度由 CSS 控制在 120px，字體 36px，清楚但不誇張
-    if st.button("🆘\n救命 / 不舒服", type="primary", use_container_width=True):
+    # 【修正】單行文字，字體自動變大
+    if st.button("🆘 救命 / 身體不舒服", type="primary", use_container_width=True):
         st.session_state['page'] = 'symptom_select'
         st.rerun()
 
@@ -310,7 +307,7 @@ def page_result():
             st.rerun()
 
 # ==========================================
-# 3. 主程式入口 (這個就是你之前漏掉的部分)
+# 3. 主程式入口 (邏輯補齊)
 # ==========================================
 
 if st.session_state['page'] == 'home':
